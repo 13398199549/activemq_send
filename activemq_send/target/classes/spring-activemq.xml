@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:amq="http://activemq.apache.org/schema/core" xmlns:jms="http://www.springframework.org/schema/jms"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jms
+        http://www.springframework.org/schema/jms/spring-jms-4.0.xsd
+        http://activemq.apache.org/schema/core
+        http://activemq.apache.org/schema/core/activemq-core-5.8.0.xsd">
+
+	<context:component-scan base-package="org.framestudy.activemq"></context:component-scan>
+
+	<!-- 配置连接工厂 -->
+	<amq:connectionFactory id="amqConnectionFactory"
+		brokerURL="tcp://127.0.0.1:61616" userName="admin" password="admin" />
+
+	<bean id="connectionFactory"
+		class="org.springframework.jms.connection.CachingConnectionFactory">
+		<constructor-arg ref="amqConnectionFactory" />
+		<property name="sessionCacheSize" value="100" />
+	</bean>
+
+	<!-- 定义spring针对消息服务器，封装的模板对象 -->
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<!-- 定义默认使用的目的地 -->
+		<property name="defaultDestinationName" value="logs" />
+	</bean>
+	
+	<!-- 配置目的地 -->
+	<!-- 定义消息队列（Queue） -->
+	<bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+		<!-- 设置消息队列的名字 -->
+		<constructor-arg>
+			<value>message</value>
+		</constructor-arg>
+	</bean>
+	
+	<!-- 定义消息主题（topic） -->
+	<bean id="topicDestination" class="org.apache.activemq.command.ActiveMQTopic">
+		<!-- 设置消息队列的名字 -->
+		<constructor-arg>
+			<value>message</value>
+		</constructor-arg>
+	</bean>
+	
+	<!-- 如果当前应用程序，还需要去做为消息接受者，那么需要配置如下代码 -->
+	<!-- 显示注入消息监听容器（Queue），配置连接工厂，监听的目标是demoQueueDestination，监听器是上面定义的监听器 -->
+	<bean id="queueListenerContainer"
+		class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		
+		<property name="connectionFactory" ref="connectionFactory" />
+		<!-- 定义目的地 -->
+		<property name="destination" ref="topicDestination" />
+		
+		<!-- 定义消息监听者，也可以称之为：接收者 -->
+		<property name="messageListener" ref="receiveMessageListener" />
+		
+		<!-- true是topic，false是queue -->
+		<property name="pubSubDomain" value="true"></property>
+	</bean>
+	
+
+</beans>
